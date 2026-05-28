@@ -4,11 +4,12 @@ import {
   createChart,
   ColorType,
   CandlestickSeries,
-  UTCTimestamp,
+  Time,
 } from "lightweight-charts";
 import { useEffect, useRef } from "react";
 
 export default function ChartArea() {
+  // FIX: type the ref properly so TypeScript doesn't complain about .clientWidth
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,6 +35,8 @@ export default function ChartArea() {
       },
     });
 
+    // Use addSeries(CandlestickSeries, ...) — compatible with lightweight-charts v5+
+    // which is what Next.js 16 / Turbopack resolves. addCandlestickSeries() is v3 API.
     const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: "#22c55e",
       downColor: "#ef4444",
@@ -42,15 +45,15 @@ export default function ChartArea() {
       wickDownColor: "#ef4444",
     });
 
-    const now = Math.floor(Date.now() / 1000) as UTCTimestamp;
-
+    // Build initial 40-candle history
+    const now = Math.floor(Date.now() / 1000);
     const data: {
-      time: UTCTimestamp;
-      open: number;
-      high: number;
-      low: number;
-      close: number;
-    }[] = [];
+  time: Time;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}[] = [];
 
     let lastClose = 9664;
 
@@ -60,8 +63,10 @@ export default function ChartArea() {
       const high = Math.max(open, close) + Math.random() * 4;
       const low = Math.min(open, close) - Math.random() * 4;
 
+      // FIX: space candles 5 s apart anchored to a fixed `now` so timestamps
+      // are guaranteed unique and strictly ascending (no duplicate-time errors).
       data.push({
-        time: (now - (40 - i) * 5) as UTCTimestamp,
+        time: (now - (40 - i) * 5) as Time,
         open: Number(open.toFixed(2)),
         high: Number(high.toFixed(2)),
         low: Number(low.toFixed(2)),
@@ -74,27 +79,24 @@ export default function ChartArea() {
     candleSeries.setData(data);
     chart.timeScale().fitContent();
 
-    let lastCandleTime: UTCTimestamp = now;
+    // FIX: track the last candle timestamp explicitly so each new candle
+    // always gets a timestamp strictly greater than the previous one,
+    // even if two interval ticks fire within the same second.
+    let lastCandleTime = data[data.length - 1].time;
 
     const interval = setInterval(() => {
       const last = data[data.length - 1];
-
       const open = last.close;
       const close = open + (Math.random() - 0.5) * 10;
       const high = Math.max(open, close) + Math.random() * 3;
       const low = Math.min(open, close) - Math.random() * 3;
 
-      const nowSec = Math.floor(Date.now() / 1000) as UTCTimestamp;
-
-      const nextTime = (Math.max(
-        nowSec,
-        lastCandleTime + 1
-      )) as UTCTimestamp;
-
+      // FIX: ensure strictly increasing time — never reuse or go backwards
+      const nextTime = Math.max(Math.floor(Date.now() / 1000), lastCandleTime + 1);
       lastCandleTime = nextTime;
 
       const candle = {
-        time: nextTime,
+        time: nextTime as Time,
         open: Number(open.toFixed(2)),
         high: Number(high.toFixed(2)),
         low: Number(low.toFixed(2)),
@@ -108,14 +110,12 @@ export default function ChartArea() {
       chart.timeScale().scrollToRealTime();
     }, 2000);
 
+    // Responsive resize
     const handleResize = () => {
       if (chartContainerRef.current) {
-        chart.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-        });
+        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
       }
     };
-
     window.addEventListener("resize", handleResize);
 
     return () => {
@@ -127,20 +127,22 @@ export default function ChartArea() {
 
   return (
     <div className="w-full bg-[#0b0f1a]">
+      {/* CHART HEADER */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#1d2333]">
         <div>
           <div className="text-sm text-zinc-500">EUR/USD</div>
           <div className="text-xl font-bold text-white">Live Market</div>
         </div>
-
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-sm text-emerald-400">LIVE</span>
         </div>
       </div>
 
+      {/* CHART CANVAS */}
       <div ref={chartContainerRef} className="w-full" />
 
+      {/* FOOTER */}
       <div className="px-4 py-3 border-t border-[#1d2333] flex items-center justify-between text-sm">
         <div className="text-zinc-500">Candlestick Chart</div>
         <div className="text-emerald-400">Real-Time Simulation</div>
