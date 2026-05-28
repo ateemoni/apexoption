@@ -1,6 +1,11 @@
 "use client";
 
-import { createChart, ColorType, CandlestickSeries } from "lightweight-charts";
+import {
+  createChart,
+  ColorType,
+  CandlestickSeries,
+  Time,
+} from "lightweight-charts";
 import { useEffect, useRef } from "react";
 
 export default function ChartArea() {
@@ -43,12 +48,12 @@ export default function ChartArea() {
     // Build initial 40-candle history
     const now = Math.floor(Date.now() / 1000);
     const data: {
-      time: number;
-      open: number;
-      high: number;
-      low: number;
-      close: number;
-    }[] = [];
+  time: Time;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}[] = [];
 
     let lastClose = 9664;
 
@@ -61,7 +66,7 @@ export default function ChartArea() {
       // FIX: space candles 5 s apart anchored to a fixed `now` so timestamps
       // are guaranteed unique and strictly ascending (no duplicate-time errors).
       data.push({
-        time: now - (40 - i) * 5,
+        time: (now - (40 - i) * 5) as Time,
         open: Number(open.toFixed(2)),
         high: Number(high.toFixed(2)),
         low: Number(low.toFixed(2)),
@@ -91,7 +96,7 @@ export default function ChartArea() {
       lastCandleTime = nextTime;
 
       const candle = {
-        time: nextTime,
+        time: nextTime as Time,
         open: Number(open.toFixed(2)),
         high: Number(high.toFixed(2)),
         low: Number(low.toFixed(2)),
