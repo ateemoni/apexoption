@@ -74,22 +74,22 @@ export default function ChartArea() {
     candleSeries.setData(data);
     chart.timeScale().fitContent();
 
-    let lastCandleTime: UTCTimestamp = now;
+    let lastCandleTime = now as number;
 
-    const interval = setInterval(() => {
-      const last = data[data.length - 1];
+const interval = setInterval(() => {
+  const last = data[data.length - 1];
 
-      const open = last.close;
-      const close = open + (Math.random() - 0.5) * 10;
-      const high = Math.max(open, close) + Math.random() * 3;
-      const low = Math.min(open, close) - Math.random() * 3;
+  const open = last.close;
+  const close = open + (Math.random() - 0.5) * 10;
+  const high = Math.max(open, close) + Math.random() * 3;
+  const low = Math.min(open, close) - Math.random() * 3;
 
-      const nowSec = Math.floor(Date.now() / 1000) as UTCTimestamp;
+  const nowSec = Math.floor(Date.now() / 1000);
 
-      const nextTime = (Math.max(
-        nowSec,
-        lastCandleTime + 1
-      )) as UTCTimestamp;
+  // FIX: ensure strictly increasing time — never reuse or go backwards
+  const nextTime = Math.max(nowSec, lastCandleTime + 1) as UTCTimestamp;
+
+  lastCandleTime = nextTime as number;
 
       lastCandleTime = nextTime;
 
