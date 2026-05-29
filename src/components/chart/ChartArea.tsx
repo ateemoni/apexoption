@@ -91,7 +91,6 @@ const interval = setInterval(() => {
 
   lastCandleTime = nextTime as number;
 
-      lastCandleTime = nextTime;
 
       const candle = {
         time: nextTime,
