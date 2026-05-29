@@ -1,5 +1,6 @@
 "use client";
 
+import DepositModal from "@/components/DepositModal";
 import ChartArea from "@/components/chart/ChartArea";
 import { useEffect, useRef, useState } from "react";
 import { TrendingUp, TrendingDown, Zap, Activity, Clock, ChevronUp, ChevronDown, BarChart2, History, Briefcase, Home as HomeIcon } from "lucide-react";
@@ -30,6 +31,7 @@ export default function Home() {
   const [exitPrice,      setExitPrice]      = useState<number | null>(null);
   const [floatingPnL,    setFloatingPnL]    = useState(0);
   const [signal,         setSignal]         = useState<"BUY" | "SELL" | "WAIT">("WAIT");
+  const [showDeposit, setShowDeposit] = useState(false);
   const [tradeMode,      setTradeMode]      = useState<"manual" | "auto">("manual");
   const [activeNav,      setActiveNav]      = useState<NavTab>("trade");
   const [digits,         setDigits]         = useState(
@@ -151,17 +153,34 @@ export default function Home() {
 
       {/* ── TOP BAR ── */}
       <header className="flex items-center justify-between px-4 pt-5 pb-3">
-        <div>
-          <p className="text-xs text-zinc-500 uppercase tracking-widest">ApexOption</p>
-          <h1 className="text-lg font-bold text-white leading-tight">
-            Apex<span className="text-cyan-400">Option</span>
-          </h1>
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-zinc-500">Balance</p>
-          <p className="text-xl font-bold font-mono text-emerald-400">${fmt(balance)}</p>
-        </div>
-      </header>
+  <div>
+    <p className="text-xs text-zinc-500 uppercase tracking-widest">ApexOption</p>
+    <h1 className="text-lg font-bold text-white leading-tight">
+      Apex<span className="text-cyan-400">Option</span>
+    </h1>
+  </div>
+  <div className="text-right flex items-center gap-3">
+    <div>
+      <p className="text-xs text-zinc-500">Balance</p>
+      <p className="text-xl font-bold font-mono text-emerald-400">${fmt(balance)}</p>
+    </div>
+    <button
+      onClick={() => setShowDeposit(true)}
+      className="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-xl text-xs font-bold transition-all"
+    >
+      + Deposit
+    </button>
+    {showDeposit && (
+  <DepositModal
+    onClose={() => setShowDeposit(false)}
+    onDeposit={(amount) => {
+      setBalance((prev) => prev + amount);
+      setShowDeposit(false);
+    }}
+  />
+)}
+  </div>
+</header>
 
       {/* ── STATS STRIP ── */}
       <div className="grid grid-cols-3 gap-2 px-4 mb-3">
