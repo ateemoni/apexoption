@@ -170,15 +170,6 @@ export default function Home() {
     >
       + Deposit
     </button>
-    {showDeposit && (
-  <DepositModal
-    onClose={() => setShowDeposit(false)}
-    onDeposit={(amount) => {
-      setBalance((prev) => prev + amount);
-      setShowDeposit(false);
-    }}
-  />
-)}
   </div>
 </header>
 
@@ -509,6 +500,25 @@ export default function Home() {
           </button>
         ))}
       </nav>
+      {/* ── BOTTOM NAV ── */}
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-[#0a0e18]/95 backdrop-blur border-t border-[#1a2235] flex justify-around py-3 px-2 z-50">
+        ...
+      </nav>
+
+      {/* ✅ ADD THIS HERE */}
+      {showDeposit && (
+        <DepositModal
+          onClose={() => setShowDeposit(false)}
+          onDeposit={(amount) => {
+            setBalance((prev) => prev + amount);
+            setShowDeposit(false);
+          }}
+        />
+      )}
+
+    </div>
+  );
+}
     </div>
   );
 }
