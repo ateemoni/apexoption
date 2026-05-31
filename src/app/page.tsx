@@ -4,13 +4,10 @@ import DepositModal from "@/components/DepositModal";
 import ChartArea from "@/components/chart/ChartArea";
 import { useEffect, useRef, useState } from "react";
 import { TrendingUp, TrendingDown, Zap, Activity, Clock, ChevronUp, ChevronDown, BarChart2, History, Briefcase, Home as HomeIcon } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 // ── Supabase ───────────────────────────────────────────────────────────────────
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+ 
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Trade    = { id: number; type: string; result: string; digit: number; stake: number; time: string };
