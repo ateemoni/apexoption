@@ -164,7 +164,7 @@ export default function DepositModal({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="w-full max-w-md bg-[#0f1520] border border-[#1a2235] rounded-t-3xl p-6 pb-10">
+      <div className="w-full max-w-md bg-[#0f1520] border border-[#1a2235] rounded-t-3xl p-6 pb-10 overflow-y-auto max-h-[90vh]">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
