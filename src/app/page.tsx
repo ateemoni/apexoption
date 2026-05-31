@@ -4,6 +4,13 @@ import DepositModal from "@/components/DepositModal";
 import ChartArea from "@/components/chart/ChartArea";
 import { useEffect, useRef, useState } from "react";
 import { TrendingUp, TrendingDown, Zap, Activity, Clock, ChevronUp, ChevronDown, BarChart2, History, Briefcase, Home as HomeIcon } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+
+// ── Supabase ───────────────────────────────────────────────────────────────────
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Trade    = { id: number; type: string; result: string; digit: number; stake: number; time: string };
@@ -12,13 +19,15 @@ type FeedItem = { id: number; user: string; result: string; amount: number };
 type NavTab   = "trade" | "positions" | "history" | "portfolio";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const fmt   = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const now   = () => new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const now = () => new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
 export default function Home() {
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const [balance,        setBalance]        = useState(10_000);
+  const [balance,        setBalance]        = useState(0);           // starts at 0, loaded from Supabase
+  const [userId,         setUserId]         = useState<string | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(true);
   const [stake,          setStake]          = useState(10);
   const [customStake,    setCustomStake]    = useState("");
   const [message,        setMessage]        = useState<{ text: string; type: "win" | "loss" | "info" | "" }>({ text: "", type: "" });
@@ -31,7 +40,7 @@ export default function Home() {
   const [exitPrice,      setExitPrice]      = useState<number | null>(null);
   const [floatingPnL,    setFloatingPnL]    = useState(0);
   const [signal,         setSignal]         = useState<"BUY" | "SELL" | "WAIT">("WAIT");
-  const [showDeposit, setShowDeposit] = useState(false);
+  const [showDeposit,    setShowDeposit]    = useState(false);
   const [tradeMode,      setTradeMode]      = useState<"manual" | "auto">("manual");
   const [activeNav,      setActiveNav]      = useState<NavTab>("trade");
   const [digits,         setDigits]         = useState(
@@ -42,24 +51,60 @@ export default function Home() {
   const [liveFeed,  setLiveFeed]  = useState<FeedItem[]>([]);
 
   // running stats
-  const wins   = history.filter(h => h.result === "WIN").length;
-  const losses = history.filter(h => h.result === "LOSS").length;
+  const wins    = history.filter(h => h.result === "WIN").length;
+  const losses  = history.filter(h => h.result === "LOSS").length;
   const winRate = history.length ? Math.round((wins / history.length) * 100) : 0;
   const totalPnL = history.reduce((acc, t) =>
     acc + (t.result === "WIN" ? t.stake * 0.95 : -t.stake), 0);
 
   // ── Refs (stale-closure guard) ─────────────────────────────────────────────
-  const isTradingRef    = useRef(isTrading);
-  const entryPriceRef   = useRef(entryPrice);
-  const stakeRef        = useRef(stake);
-  const marketTrendRef  = useRef(marketTrend);
+  const isTradingRef   = useRef(isTrading);
+  const entryPriceRef  = useRef(entryPrice);
+  const stakeRef       = useRef(stake);
+  const marketTrendRef = useRef(marketTrend);
+  const balanceRef     = useRef(balance);
+  const userIdRef      = useRef(userId);
 
-  useEffect(() => { isTradingRef.current   = isTrading;    }, [isTrading]);
-  useEffect(() => { entryPriceRef.current  = entryPrice;   }, [entryPrice]);
-  useEffect(() => { stakeRef.current       = stake;        }, [stake]);
-  useEffect(() => { marketTrendRef.current = marketTrend;  }, [marketTrend]);
+  useEffect(() => { isTradingRef.current   = isTrading;  }, [isTrading]);
+  useEffect(() => { entryPriceRef.current  = entryPrice; }, [entryPrice]);
+  useEffect(() => { stakeRef.current       = stake;      }, [stake]);
+  useEffect(() => { marketTrendRef.current = marketTrend;}, [marketTrend]);
+  useEffect(() => { balanceRef.current     = balance;    }, [balance]);
+  useEffect(() => { userIdRef.current      = userId;     }, [userId]);
 
-  // ── Live tick ─────────────────────────────────────────────────────────────
+  // ── Load balance from Supabase ─────────────────────────────────────────────
+  useEffect(() => {
+    const loadBalance = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setBalanceLoading(false);
+        return;
+      }
+      setUserId(user.id);
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("balance")
+        .eq("id", user.id)
+        .single();
+
+      if (data) setBalance(data.balance);
+      setBalanceLoading(false);
+    };
+    loadBalance();
+  }, []);
+
+  // ── Save balance to Supabase ───────────────────────────────────────────────
+  const saveBalance = async (newBalance: number) => {
+    const uid = userIdRef.current;
+    if (!uid) return;
+    await supabase
+      .from("profiles")
+      .update({ balance: newBalance })
+      .eq("id", uid);
+  };
+
+  // ── Live tick ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
       setDigits(Array.from({ length: 10 }, (_, i) => ({
@@ -102,11 +147,13 @@ export default function Home() {
     if (isTrading) return;
     if (balance < stake) { setMessage({ text: "Insufficient balance", type: "info" }); return; }
 
+    const newBalanceAfterStake = balance - stake;
     setIsTrading(true);
     setCountdown(3);
     setEntryPrice(price);
     setExitPrice(null);
-    setBalance(prev => prev - stake);
+    setBalance(newBalanceAfterStake);
+    saveBalance(newBalanceAfterStake);
     setMessage({ text: `${type.toUpperCase()} position opened`, type: "info" });
 
     const newPos: Position = { id: Date.now(), type, entry: price, stake, status: "open" };
@@ -127,10 +174,14 @@ export default function Home() {
       const won    = (type === "even" && isEven) || (type === "odd" && !isEven);
 
       if (won) {
-        setBalance(prev => prev + stake * 1.95);
+        const winBalance = balanceRef.current + stakeRef.current * 1.95;
+        setBalance(winBalance);
+        saveBalance(winBalance);
         setMessage({ text: `🎉 WIN  —  Digit ${winningDigit}`, type: "win" });
       } else {
         setMessage({ text: `❌ LOSS  —  Digit ${winningDigit}`, type: "loss" });
+        // balance already deducted above, just save current value
+        saveBalance(balanceRef.current);
       }
 
       setHistory(prev => [
@@ -153,25 +204,27 @@ export default function Home() {
 
       {/* ── TOP BAR ── */}
       <header className="flex items-center justify-between px-4 pt-5 pb-3">
-  <div>
-    <p className="text-xs text-zinc-500 uppercase tracking-widest">ApexOption</p>
-    <h1 className="text-lg font-bold text-white leading-tight">
-      Apex<span className="text-cyan-400">Option</span>
-    </h1>
-  </div>
-  <div className="text-right flex items-center gap-3">
-    <div>
-      <p className="text-xs text-zinc-500">Balance</p>
-      <p className="text-xl font-bold font-mono text-emerald-400">${fmt(balance)}</p>
-    </div>
-    <button
-      onClick={() => setShowDeposit(true)}
-      className="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-xl text-xs font-bold transition-all"
-    >
-      + Deposit
-    </button>
-  </div>
-</header>
+        <div>
+          <p className="text-xs text-zinc-500 uppercase tracking-widest">ApexOption</p>
+          <h1 className="text-lg font-bold text-white leading-tight">
+            Apex<span className="text-cyan-400">Option</span>
+          </h1>
+        </div>
+        <div className="text-right flex items-center gap-3">
+          <div>
+            <p className="text-xs text-zinc-500">Balance</p>
+            <p className="text-xl font-bold font-mono text-emerald-400">
+              {balanceLoading ? "..." : `$${fmt(balance)}`}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowDeposit(true)}
+            className="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-xl text-xs font-bold transition-all"
+          >
+            + Deposit
+          </button>
+        </div>
+      </header>
 
       {/* ── STATS STRIP ── */}
       <div className="grid grid-cols-3 gap-2 px-4 mb-3">
@@ -215,7 +268,6 @@ export default function Home() {
         </div>
 
         <div className="flex gap-2">
-          {/* AI Signal badge */}
           <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border ${
             signal === "BUY"  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
             signal === "SELL" ? "bg-red-500/10 border-red-500/30 text-red-400" :
@@ -224,7 +276,6 @@ export default function Home() {
             <Zap size={11} />
             {signal}
           </div>
-          {/* Trend badge */}
           <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border ${
             marketTrend === "bullish"
               ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
@@ -341,7 +392,6 @@ export default function Home() {
               </button>
             ))}
           </div>
-          {/* Custom stake input */}
           <div className="flex gap-2">
             <input
               type="number"
@@ -485,10 +535,10 @@ export default function Home() {
       {/* ── BOTTOM NAV ── */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-[#0a0e18]/95 backdrop-blur border-t border-[#1a2235] flex justify-around py-3 px-2 z-50">
         {([
-          { id: "trade",     Icon: HomeIcon,   label: "Trade"     },
-          { id: "positions", Icon: Briefcase,  label: "Positions" },
-          { id: "history",   Icon: History,    label: "History"   },
-          { id: "portfolio", Icon: BarChart2,  label: "Portfolio" },
+          { id: "trade",     Icon: HomeIcon,  label: "Trade"     },
+          { id: "positions", Icon: Briefcase, label: "Positions" },
+          { id: "history",   Icon: History,   label: "History"   },
+          { id: "portfolio", Icon: BarChart2, label: "Portfolio" },
         ] as { id: NavTab; Icon: React.ElementType; label: string }[]).map(({ id, Icon, label }) => (
           <button key={id} onClick={() => setActiveNav(id)}
             className={`flex flex-col items-center gap-1 px-3 transition-all ${
@@ -500,17 +550,15 @@ export default function Home() {
           </button>
         ))}
       </nav>
-      {/* ── BOTTOM NAV ── */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-[#0a0e18]/95 backdrop-blur border-t border-[#1a2235] flex justify-around py-3 px-2 z-50">
-        ...
-      </nav>
 
-      {/* ✅ ADD THIS HERE */}
+      {/* ── DEPOSIT MODAL ── */}
       {showDeposit && (
         <DepositModal
           onClose={() => setShowDeposit(false)}
           onDeposit={(amount) => {
-            setBalance((prev) => prev + amount);
+            const newBalance = balance + amount;
+            setBalance(newBalance);
+            saveBalance(newBalance);
             setShowDeposit(false);
           }}
         />
