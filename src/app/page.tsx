@@ -73,7 +73,6 @@ export default function Home() {
   useEffect(() => {
     const loadBalance = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      console.log("loadBalance user", user);
       if (!user) {
         setBalanceLoading(false);
         return;
@@ -95,13 +94,11 @@ export default function Home() {
   // ── Save balance to Supabase ───────────────────────────────────────────────
   const saveBalance = async (newBalance: number) => {
   const uid = userIdRef.current;
-  console.log("saveBalance called", { uid, newBalance }); // ← add this
   if (!uid) return;
   const { error } = await supabase
     .from("profiles")
     .update({ balance: newBalance })
     .eq("id", uid);
-  console.log("saveBalance result", { error }); // ← add this
 };
 
   // ── Live tick ──────────────────────────────────────────────────────────────
