@@ -39,7 +39,6 @@ export default function Home() {
   const [signal,         setSignal]         = useState<"BUY" | "SELL" | "WAIT">("WAIT");
   const [showDeposit,    setShowDeposit]    = useState(false);
   const [tradeMode,      setTradeMode]      = useState<"manual" | "auto">("manual");
-  const [lastDigit, setLastDigit] = useState<number | null>(null);
   const [activeNav,      setActiveNav]      = useState<NavTab>("trade");
   const [digits,         setDigits]         = useState(
     Array.from({ length: 10 }, (_, i) => ({ digit: i, percent: 10 }))
