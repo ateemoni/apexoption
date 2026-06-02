@@ -3,7 +3,7 @@
 import DepositModal from "@/components/DepositModal";
 import ChartArea from "@/components/chart/ChartArea";
 import { useEffect, useRef, useState } from "react";
-import { TrendingUp, TrendingDown, Zap, Activity, Clock, ChevronUp, ChevronDown, BarChart2, History, Briefcase, Home as HomeIcon } from "lucide-react";
+import { TrendingUp, TrendingDown, Zap, Activity, Clock, ChevronUp, ChevronDown, BarChart2, Briefcase, Home as HomeIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 // ── Supabase ───────────────────────────────────────────────────────────────────
@@ -13,7 +13,9 @@ import { supabase } from "@/lib/supabase";
 type Trade    = { id: number; type: string; result: string; digit: number; stake: number; time: string };
 type Position = { id: number; type: "even" | "odd"; entry: number; stake: number; status: "open" | "closed" };
 type FeedItem = { id: number; user: string; result: string; amount: number };
-type NavTab   = "trade" | "positions" | "history" | "portfolio";
+{ id: "trade",     Icon: HomeIcon,  label: "Trade"     },
+          { id: "positions", Icon: Briefcase, label: "Positions" },
+          { id: "account",   Icon: BarChart2, label: "Account"   },
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
