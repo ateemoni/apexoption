@@ -13,9 +13,7 @@ import { supabase } from "@/lib/supabase";
 type Trade    = { id: number; type: string; result: string; digit: number; stake: number; time: string };
 type Position = { id: number; type: "even" | "odd"; entry: number; stake: number; status: "open" | "closed" };
 type FeedItem = { id: number; user: string; result: string; amount: number };
-{ id: "trade",     Icon: HomeIcon,  label: "Trade"     },
-          { id: "positions", Icon: Briefcase, label: "Positions" },
-          { id: "account",   Icon: BarChart2, label: "Account"   },
+type NavTab   = "trade" | "positions" | "account";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
