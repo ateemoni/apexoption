@@ -39,10 +39,12 @@ export default function Home() {
   const [signal,         setSignal]         = useState<"BUY" | "SELL" | "WAIT">("WAIT");
   const [showDeposit,    setShowDeposit]    = useState(false);
   const [tradeMode,      setTradeMode]      = useState<"manual" | "auto">("manual");
+  const [lastDigit, setLastDigit] = useState<number | null>(null);
   const [activeNav,      setActiveNav]      = useState<NavTab>("trade");
   const [digits,         setDigits]         = useState(
     Array.from({ length: 10 }, (_, i) => ({ digit: i, percent: 10 }))
   );
+  const [lastDigit,      setLastDigit]      = useState<number | null>(null);
   const [history,   setHistory]   = useState<Trade[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [liveFeed,  setLiveFeed]  = useState<FeedItem[]>([]);
@@ -104,6 +106,8 @@ export default function Home() {
   // ── Live tick ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
+      const newLastDigit = Math.floor(Math.random() * 10);
+      setLastDigit(newLastDigit);
       setDigits(Array.from({ length: 10 }, (_, i) => ({
         digit: i, percent: Math.floor(Math.random() * 10) + 5,
       })));
@@ -290,28 +294,69 @@ export default function Home() {
       </div>
 
       {/* ── DIGIT RINGS ── */}
+      {/* ── DIGIT RINGS ── */}
       <div className="px-4 mb-3">
         <div className="bg-[#0f1520] border border-[#1a2235] rounded-2xl p-3">
           <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-1">
             <Activity size={10}/> Last Digit Distribution
+            {lastDigit !== null && (
+              <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                Last: {lastDigit}
+              </span>
+            )}
           </p>
           <div className="flex justify-between">
             {digits.map(item => {
+              const isLast = item.digit === lastDigit;
               const r = 20;
               const circ = 2 * Math.PI * r;
               const offset = circ - (circ * item.percent) / 20;
-              const color = item.percent >= 12 ? "#22c55e" : item.percent <= 7 ? "#ef4444" : "#06b6d4";
+              const color = isLast
+                ? "#ffffff"
+                : item.percent >= 12 ? "#22c55e"
+                : item.percent <= 7 ? "#ef4444"
+                : "#06b6d4";
               return (
-                <div key={item.digit} className="flex flex-col items-center gap-1">
+                <div
+                  key={item.digit}
+                  className={`flex flex-col items-center gap-1 transition-all duration-300 ${
+                    isLast ? "scale-110" : "scale-100 opacity-70"
+                  }`}
+                >
                   <div className="relative w-11 h-11">
+                    {/* Glow effect for last digit */}
+                    {isLast && (
+                      <div
+                        className="absolute inset-0 rounded-full animate-ping opacity-30"
+                        style={{ backgroundColor: color, animationDuration: "1s" }}
+                      />
+                    )}
                     <svg width="44" height="44" className="-rotate-90" viewBox="0 0 44 44">
                       <circle cx="22" cy="22" r={r} stroke="#1a2235" strokeWidth="4" fill="none"/>
-                      <circle cx="22" cy="22" r={r} stroke={color} strokeWidth="4" fill="none"
-                        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"/>
+                      <circle
+                        cx="22" cy="22" r={r}
+                        stroke={color}
+                        strokeWidth={isLast ? 5 : 4}
+                        fill="none"
+                        strokeDasharray={circ}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        style={{ transition: "stroke-dashoffset 0.5s ease, stroke 0.3s ease" }}
+                      />
                     </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">{item.digit}</span>
+                    <span
+                      className="absolute inset-0 flex items-center justify-center text-xs font-bold transition-all"
+                      style={{ color: isLast ? "#ffffff" : undefined }}
+                    >
+                      {item.digit}
+                    </span>
                   </div>
-                  <span className="text-[9px] font-mono" style={{ color }}>{item.percent}%</span>
+                  <span
+                    className="text-[9px] font-mono transition-all"
+                    style={{ color }}
+                  >
+                    {item.percent}%
+                  </span>
                 </div>
               );
             })}
