@@ -93,14 +93,6 @@ export default function Home() {
 
   // ── Save balance to Supabase ───────────────────────────────────────────────
   const saveBalance = async (newBalance: number) => {
-    const uid = userIdRef.current;
-    if (!uid) return;
-    await supabase
-      .from("profiles")
-      .update({ balance: newBalance })
-      .eq("id", uid);
-  };
-  const saveBalance = async (newBalance: number) => {
   const uid = userIdRef.current;
   console.log("saveBalance called", { uid, newBalance }); // ← add this
   if (!uid) return;
