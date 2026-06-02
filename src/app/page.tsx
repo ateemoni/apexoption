@@ -578,7 +578,7 @@ export default function Home() {
         {([
           { id: "trade",     Icon: HomeIcon,  label: "Trade"     },
           { id: "positions", Icon: Briefcase, label: "Positions" },
-          { id: "history",   Icon: History,   label: "History"   },
+          { id: "account",   Icon: BarChart2, label: "Account"   },
           { id: "portfolio", Icon: BarChart2, label: "Portfolio" },
         ] as { id: NavTab; Icon: React.ElementType; label: string }[]).map(({ id, Icon, label }) => (
           <button key={id} onClick={() => setActiveNav(id)}
