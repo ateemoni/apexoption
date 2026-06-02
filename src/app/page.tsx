@@ -73,6 +73,7 @@ export default function Home() {
   useEffect(() => {
     const loadBalance = async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log("loadBalance user", user);
       if (!user) {
         setBalanceLoading(false);
         return;
