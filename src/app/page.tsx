@@ -3,7 +3,7 @@
 import DepositModal from "@/components/DepositModal";
 import ChartArea from "@/components/chart/ChartArea";
 import { useEffect, useRef, useState } from "react";
-import { TrendingUp, TrendingDown, Zap, Activity, Clock, ChevronUp, ChevronDown, BarChart2, Briefcase, Home as HomeIcon } from "lucide-react";
+import { TrendingUp, TrendingDown, Zap, Activity, Clock, ChevronUp, ChevronDown, BarChart2, Briefcase, Home as HomeIcon, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 // ── Supabase ───────────────────────────────────────────────────────────────────
@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabase";
 type Trade    = { id: number; type: string; result: string; digit: number; stake: number; time: string };
 type Position = { id: number; type: "even" | "odd"; entry: number; stake: number; status: "open" | "closed" };
 type FeedItem = { id: number; user: string; result: string; amount: number };
-type NavTab   = "trade" | "positions" | "account";
+type NavTab   = "trade" | "positions" | "account" | "portfolio";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -39,6 +39,7 @@ export default function Home() {
   const [signal,         setSignal]         = useState<"BUY" | "SELL" | "WAIT">("WAIT");
   const [showDeposit,    setShowDeposit]    = useState(false);
   const [tradeMode,      setTradeMode]      = useState<"manual" | "auto">("manual");
+  const [showWithdraw, setShowWithdraw] = useState(false);
   const [activeNav,      setActiveNav]      = useState<NavTab>("trade");
   const [digits,         setDigits]         = useState(
     Array.from({ length: 10 }, (_, i) => ({ digit: i, percent: 10 }))
@@ -227,6 +228,118 @@ export default function Home() {
       </header>
 
       {/* ── STATS STRIP ── */}
+      {/* ── TAB CONTENT ── */}
+      {activeNav === "account" && (
+        <div className="px-4 mb-24 space-y-4">
+          {/* Balance Card */}
+          <div className="bg-[#0f1520] border border-[#1a2235] rounded-2xl p-5">
+            <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">Total Balance</p>
+            <p className="text-3xl font-bold font-mono text-emerald-400">${fmt(balance)}</p>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Win Rate", value: `${winRate}%`, color: "text-emerald-400" },
+              { label: "Trades",   value: history.length, color: "text-cyan-400" },
+              { label: "P&L",      value: `${totalPnL >= 0 ? "+" : ""}$${fmt(Math.abs(totalPnL))}`, color: totalPnL >= 0 ? "text-emerald-400" : "text-red-400" },
+            ].map(s => (
+              <div key={s.label} className="bg-[#0f1520] border border-[#1a2235] rounded-xl p-3 text-center">
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wider">{s.label}</p>
+                <p className={`text-sm font-bold mt-0.5 font-mono ${s.color}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Deposit & Withdraw buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setShowDeposit(true)}
+              className="py-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm transition-all"
+            >
+
+              + Deposit
+            </button>
+            <button
+              onClick={() => setShowWithdraw(true)}
+              className="py-4 rounded-2xl bg-[#0f1520] border border-[#1a2235] hover:border-zinc-600 text-white font-bold text-sm transition-all"
+            >
+              − Withdraw
+            </button>
+          </div>
+
+          {/* Trade History */}
+          <div className="bg-[#0f1520] border border-[#1a2235] rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#1a2235]">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Trade History</p>
+            </div>
+            <div className="max-h-64 overflow-y-auto">
+              {history.length === 0 ? (
+                <p className="text-center text-zinc-600 text-xs py-8">No trades yet</p>
+              ) : history.map(trade => (
+                <div key={trade.id} className="flex items-center justify-between px-4 py-3 border-b border-[#1a2235] last:border-0">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                        trade.type === "even" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                      }`}>{trade.type}</span>
+                      <span className="text-[10px] text-zinc-600">Digit {trade.digit}</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-600 mt-0.5">{trade.time}</p>
+                  </div>
+                  <p className={`text-xs font-bold ${trade.result === "WIN" ? "text-emerald-400" : "text-red-400"}`}>
+                    {trade.result === "WIN" ? `+$${fmt(trade.stake * 0.95)}` : `-$${fmt(trade.stake)}`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Logout */}
+          <button
+            onClick={async () => { await supabase.auth.signOut(); window.location.href = "/auth/login"; }}
+            className="w-full py-3.5 rounded-2xl border border-red-500/30 text-red-400 text-sm font-bold hover:bg-red-500/10 transition-all"
+          >
+            Sign Out
+          </button>
+        </div>
+      )}
+
+      {activeNav === "positions" && (
+        <div className="px-4 mb-24 space-y-3">
+          <div className="bg-[#0f1520] border border-[#1a2235] rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#1a2235] flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">All Positions</p>
+              <span className="text-xs text-zinc-600">{positions.length} total</span>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto">
+              {positions.length === 0 ? (
+                <p className="text-center text-zinc-600 text-xs py-8">No positions yet</p>
+              ) : positions.map(pos => (
+                <div key={pos.id} className="flex items-center justify-between px-4 py-3 border-b border-[#1a2235] last:border-0">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-md ${
+                        pos.type === "even" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                      }`}>{pos.type}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        pos.status === "open" ? "bg-cyan-500/10 text-cyan-400" : "bg-zinc-800 text-zinc-500"
+                      }`}>{pos.status}</span>
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-1 font-mono">@ {fmt(pos.entry)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-mono text-zinc-400">${fmt(pos.stake)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeNav === "trade" && (<>
+
       <div className="grid grid-cols-3 gap-2 px-4 mb-3">
         {[
           { label: "Win Rate", value: `${winRate}%`,  color: "text-emerald-400" },
@@ -592,6 +705,31 @@ export default function Home() {
         ))}
       </nav>
 
+      {/* ── WITHDRAW MODAL ── */}
+      {showWithdraw && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm"
+          onClick={(e) => e.target === e.currentTarget && setShowWithdraw(false)}>
+          <div className="w-full max-w-md bg-[#0f1520] border border-[#1a2235] rounded-t-3xl p-6 pb-10">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-bold text-white">Withdraw Funds</h2>
+              <button onClick={() => setShowWithdraw(false)} className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center">
+                <X size={14} className="text-zinc-400" />
+              </button>
+            </div>
+            <div className="text-center py-8 space-y-3">
+              <p className="text-zinc-400 text-sm">Available balance</p>
+              <p className="text-3xl font-bold font-mono text-emerald-400">${fmt(balance)}</p>
+              <p className="text-xs text-zinc-600 mt-4">Withdrawal processing coming soon.</p>
+              <p className="text-xs text-zinc-600">Contact support to withdraw funds.</p>
+            </div>
+            <button onClick={() => setShowWithdraw(false)}
+              className="w-full py-3.5 rounded-xl bg-cyan-500 text-black font-bold text-sm">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── DEPOSIT MODAL ── */}
       {showDeposit && (
         <DepositModal
@@ -603,6 +741,9 @@ export default function Home() {
             setShowDeposit(false);
           }}
         />
+      )}
+
+      </>
       )}
 
     </div>
